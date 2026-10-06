@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Panel del docente · Examen GAD-2401</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#EDF0F5; --surface:#FFFFFF; --ink:#16202E; --muted:#566275; --line:#C9D1DD;
+  --accent:#0E7C6B; --accent-ink:#FFFFFF; --accent-soft:#D6EFEA;
+  --warn:#9A4A06; --warn-soft:#FBE6C4; --danger:#B3261E; --danger-soft:#FBE0DD; --off:#566275; --off-soft:#E3E8EF;
+  --focus:#1D4ED8; --radius:10px;
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0F1620; --surface:#172231; --ink:#E7ECF3; --muted:#9AA7B8; --line:#2C3B50;
+    --accent:#34C3A8; --accent-ink:#06241F; --accent-soft:#123A35;
+    --warn:#F0B04A; --warn-soft:#3B2A0E; --danger:#FF8A80; --danger-soft:#3D1815; --off:#9AA7B8; --off-soft:#223044;
+    --focus:#7AA2FF;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-size:16px;line-height:1.45}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 16px;font-weight:700}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.input{padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);width:100%}
+.msg{padding:10px 14px;border-radius:8px}
+.msg.err{background:var(--danger-soft);color:var(--danger)}
+
+/* Login */
+.login{max-width:420px;margin:12vh auto 0;padding:0 20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px}
+.card h1{font-size:1.5rem;margin:0 0 4px}
+.card p{color:var(--muted);margin:0 0 18px}
+.card form{display:grid;gap:12px}
+.card label{font-weight:700;display:block;margin-bottom:3px}
+
+/* App */
+.top{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--line);
+  padding:10px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.top h1{font-size:1.1rem;margin:0;margin-right:auto}
+.top h1 small{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+.tabs{display:flex;gap:6px}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.live{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:.9rem}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--off)}
+.dot.on{background:#2FB344}
+main{max-width:1280px;margin:0 auto;padding:18px 20px 50px}
+.bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.bar .input{max-width:260px}
+.counts{color:var(--muted);margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.s-card{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);overflow:hidden;text-align:left;padding:0;display:block;width:100%}
+.s-card:hover{border-color:var(--ink)}
+.s-card.alert{border-color:var(--warn)}
+.s-card.crit{border-color:var(--danger)}
+.thumb{aspect-ratio:4/3;background:#0A0F16;display:grid;place-items:center;color:#9AA7B8;font-size:.9rem;position:relative}
+.thumb img{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+.thumb .tag{position:absolute;left:8px;top:8px;border-radius:999px;padding:1px 10px;font-size:.8rem;font-weight:700;background:var(--warn-soft);color:var(--warn)}
+.s-body{padding:12px 14px}
+.s-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s-sub{color:var(--muted);font-size:.9rem}
+.s-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-size:.88rem;font-variant-numeric:tabular-nums}
+.chip.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.chip.danger{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+.badge{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.85rem;font-weight:700}
+.badge.en-curso{background:var(--accent-soft);color:var(--accent)}
+.badge.fin{background:var(--off-soft);color:var(--off)}
+.badge.off{background:var(--warn-soft);color:var(--warn)}
+.badge.cam{background:var(--danger-soft);color:var(--danger)}
+.empty{color:var(--muted);padding:40px 0;text-align:center}
+
+/* Detalle */
+dialog{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--ink);padding:0;width:min(980px,96vw);max-height:92vh}
+dialog::backdrop{background:rgba(10,16,26,.7)}
+.dlg-h{display:flex;gap:12px;align-items:flex-start;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.dlg-h h2{margin:0;font-size:1.2rem;margin-right:auto}
+.dlg-b{padding:16px 20px;overflow:auto;max-height:calc(92vh - 70px)}
+.dlg-b h3{font-size:1rem;margin:18px 0 8px}
+.dlg-b h3:first-child{margin-top:0}
+.faltas{margin:0;padding-left:20px}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.gal a{display:block;position:relative;border-radius:6px;overflow:hidden;background:#0A0F16;aspect-ratio:4/3}
+.gal img{width:100%;height:100%;object-fit:cover;display:block}
+.gal span{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);color:#fff;font-size:.75rem;padding:1px 6px}
+.gal a.f{outline:3px solid var(--danger);outline-offset:-3px}
+
+/* Resultados */
+.tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:400;font-size:.9rem;position:sticky;top:0;background:var(--surface)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login" id="login">
+  <div class="card">
+    <h1>Panel del docente</h1>
+    <p>Inicia sesión para ver el examen en curso.</p>
+    <form id="login-form">
+      <div><label for="em">Correo</label><input class="input" id="em" type="email" autocomplete="username" required></div>
+      <div><label for="pw">Contraseña</label><input class="input" id="pw" type="password" autocomplete="current-password" required></div>
+      <div class="msg err" id="login-err" hidden></div>
+      <button class="btn primary" type="submit">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" hidden>
+  <header class="top">
+    <h1>Panel del docente<small id="exam-label"></small></h1>
+    <div class="tabs">
+      <button class="btn" id="tab-live" aria-pressed="true" type="button">En vivo</button>
+      <button class="btn" id="tab-res" aria-pressed="false" type="button">Resultados</button>
+    </div>
+    <span class="live"><span class="dot" id="live-dot"></span><span id="live-txt">Conectando…</span></span>
+    <button class="btn" id="btn-out" type="button">Salir</button>
+  </header>
+
+  <main>
+    <section id="view-live">
+      <div class="bar">
+        <input class="input" id="q" type="search" placeholder="Buscar por nombre o matrícula" aria-label="Buscar alumno">
+        <select class="input" id="flt" style="max-width:200px" aria-label="Filtrar por estado">
+          <option value="todos">Todos</option>
+          <option value="activos">En curso</option>
+          <option value="alerta">Con alertas</option>
+          <option value="fin">Finalizados</option>
+        </select>
+        <span class="counts" id="counts"></span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>Todavía no hay alumnos conectados a este examen.</p>
+    </section>
+
+    <section id="view-res" hidden>
+      <div class="bar">
+        <button class="btn" id="res-reload" type="button">Actualizar</button>
+        <button class="btn" id="res-csv" type="button">Descargar CSV</button>
+        <span class="counts" id="res-count"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Nombre</th><th>Matrícula</th><th>Grupo</th><th class="n">Calificación</th><th class="n">Aciertos</th>
+            <th>Motivo de fin</th><th class="n">Faltas</th><th class="n">Duración</th><th>Fecha</th>
+          </tr></thead>
+          <tbody id="res-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-h">
+    <h2 id="dlg-title"></h2>
+    <button class="btn" id="dlg-close" type="button">Cerrar</button>
+  </div>
+  <div class="dlg-b">
+    <h3>Estado</h3><div id="dlg-stats" class="s-stats"></div>
+    <h3>Faltas registradas</h3><ol class="faltas" id="dlg-faltas"></ol>
+    <h3>Fotografías</h3><div class="gal" id="dlg-gal"></div>
+    <div style="margin-top:12px"><button class="btn" id="dlg-more" type="button" hidden>Cargar más</button></div>
+  </div>
+</dialog>
+
+<script>
+/* =====================  CONFIGURACIÓN  ===================== */
+const CONFIG = {
+  SUPABASE_URL: 'https://pwbjvvjmocnjmkkyokrw.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_icxQRBw8vcE6r-oULCO0Lg_UZ5Dnj6q',
+  EXAM_ID: 'GAD-2401-U1-2.1.1',
+  EVENTS_TABLE: 'monitoreo_eventos',
+  RESULTS_TABLE: 'resultados_examen',
+  BUCKET: 'capturas-examen',
+  MAX_VIOLATIONS: 5,
+  TOTAL_Q: 30,
+  OFFLINE_SECS: 45,     // sin latidos por este tiempo = "Sin señal"
+  HOURS_BACK: 6         // ventana de eventos que se carga al abrir el panel
+};
+
+const $ = id => document.getElementById(id);
+const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+$('exam-label').textContent = CONFIG.EXAM_ID;
+
+const sessions = new Map();     // sesion_id -> datos agregados
+const cards = new Map();        // sesion_id -> elemento DOM
+const urlCache = new Map();     // storage_path -> Promise<url>
+let channel = null, resultsCache = [];
+
+/* ---------- Login ---------- */
+$('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('login-err'); err.hidden = true;
+  const { error } = await sb.auth.signInWithPassword({ email: $('em').value.trim(), password: $('pw').value });
+  if (error){ err.textContent = 'Correo o contraseña incorrectos.'; err.hidden = false; return; }
+  enterApp();
+});
+$('btn-out').addEventListener('click', async () => {
+  if (channel) await sb.removeChannel(channel);
+  await sb.auth.signOut(); location.reload();
+});
+(async () => {
+  const { data } = await sb.auth.getSession();
+  if (data.session) enterApp();
+})();
+
+async function enterApp(){
+  $('login').hidden = true; $('app').hidden = false;
+  try{ await loadEvents(); }catch(e){ setLive(false, 'Error al cargar: ' + e.message); }
+  subscribe();
+  renderAll();
+  setInterval(tickAll, 1000);
+}
+
+/* ---------- Datos ---------- */
+async function loadEvents(){
+  const since = new Date(Date.now() - CONFIG.HOURS_BACK*3600e3).toISOString();
+  const page = 1000;
+  for (let from = 0, n = 0; n < 30; n++, from += page){
+    const { data, error } = await sb.from(CONFIG.EVENTS_TABLE).select('*')
+      .eq('examen', CONFIG.EXAM_ID).gte('created_at', since)
+      .order('created_at', { ascending:true }).range(from, from + page - 1);
+    if (error) throw error;
+    data.forEach(applyEvent);
+    if (data.length < page) break;
+  }
+}
+
+function subscribe(){
+  channel = sb.channel('monitor-' + CONFIG.EXAM_ID)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:CONFIG.EVENTS_TABLE, filter:`examen=eq.${CONFIG.EXAM_ID}` },
+      payload => { applyEvent(payload.new); renderCard(sessions.get(payload.new.sesion_id)); sortCards(); updateCounts(); })
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') setLive(true, 'En vivo');
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setLive(false, 'Sin conexión en vivo');
+    });
+}
+function setLive(on, txt){ $('live-dot').classList.toggle('on', on); $('live-txt').textContent = txt; }
+
+function applyEvent(ev){
+  let s = sessions.get(ev.sesion_id);
+  if (!s){
+    s = { id:ev.sesion_id, nombre:ev.nombre, matricula:ev.matricula, grupo:ev.grupo, faltas:0, contestadas:0,
+          restante:null, restanteAt:0, lastSeen:0, camOff:false, fin:null, oscura:false, capturas:[], faltasLog:[], lastCap:null };
+    sessions.set(ev.sesion_id, s);
+  }
+  const t = new Date(ev.created_at).getTime();
+  s.lastSeen = Math.max(s.lastSeen, t);
+  if (ev.faltas != null) s.faltas = Math.max(s.faltas, ev.faltas);
+  if (ev.contestadas != null) s.contestadas = ev.contestadas;
+  if (ev.restante_seg != null && t >= s.restanteAt){ s.restante = ev.restante_seg; s.restanteAt = t; }
+  const d = ev.detalle || {};
+  switch (ev.tipo){
+    case 'captura':
+      if (ev.storage_path){
+        const c = { path:ev.storage_path, t, motivo:d.motivo || 'periodica', oscura:!!d.oscura };
+        s.capturas.push(c);
+        if (!s.lastCap || t >= s.lastCap.t){ s.lastCap = c; s.oscura = c.oscura; }
+      }
+      break;
+    case 'falta': s.faltasLog.push({ t, motivo:d.motivo || 'falta', n:d.n }); break;
+    case 'camara_off': s.camOff = true; break;
+    case 'camara_on': s.camOff = false; break;
+    case 'fin': s.fin = d.motivo || 'manual'; s.calif = d.calificacion; break;
+  }
+}
+
+/* ---------- Estado y formato ---------- */
+function estado(s){
+  if (s.fin) return { k:'fin', txt: { manual:'Entregó', tiempo:'Se acabó el tiempo', violaciones:'Terminado por faltas' }[s.fin] || 'Finalizado' };
+  if (Date.now() - s.lastSeen > CONFIG.OFFLINE_SECS*1000) return { k:'off', txt:'Sin señal' };
+  if (s.camOff) return { k:'cam', txt:'Cámara apagada' };
+  return { k:'en-curso', txt:'En curso' };
+}
+function alertLevel(s){
+  if (s.fin) return '';
+  const e = estado(s).k;
+  if (s.faltas >= CONFIG.MAX_VIOLATIONS || e === 'cam') return 'crit';
+  if (s.faltas >= 3 || e === 'off' || s.oscura) return 'alert';
+  return '';
+}
+function fmtTime(sec){
+  sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), x = sec%60;
+  const p = n => String(n).padStart(2,'0'); return h ? `${h}:${p(m)}:${p(x)}` : `${p(m)}:${p(x)}`;
+}
+function ago(ms){ const s = Math.round(ms/1000); return s < 60 ? `hace ${s} s` : `hace ${Math.floor(s/60)} min`; }
+const hhmm = t => new Date(t).toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+function signedUrl(path){
+  if (!urlCache.has(path)){
+    urlCache.set(path, sb.storage.from(CONFIG.BUCKET).createSignedUrl(path, 3600).then(r => r.data ? r.data.signedUrl : null).catch(() => null));
+  }
+  return urlCache.get(path);
+}
+
+/* ---------- Tarjetas ---------- */
+function mk(tag, cls, txt){ const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+
+function renderCard(s){
+  if (!s) return;
+  let c = cards.get(s.id);
+  if (!c){
+    c = mk('button', 's-card'); c.type = 'button';
+    const th = mk('div','thumb'); th.append(mk('span','', 'Sin foto todavía'));
+    const body = mk('div','s-body');
+    body.append(mk('div','s-name'), mk('div','s-sub'), mk('div','s-stats'));
+    c.append(th, body);
+    c.addEventListener('click', () => openDetail(s.id));
+    cards.set(s.id, c); $('grid').appendChild(c);
+  }
+  const st = estado(s), lvl = alertLevel(s);
+  c.className = 's-card' + (lvl ? ' ' + lvl : '');
+  c.dataset.estado = st.k; c.dataset.alerta = lvl ? '1' : '0';
+  c.dataset.texto = (s.nombre + ' ' + s.matricula).toLowerCase();
+  c.dataset.faltas = s.faltas;
+
+  const th = c.querySelector('.thumb');
+  if (s.lastCap && th.dataset.path !== s.lastCap.path){
+    th.dataset.path = s.lastCap.path;
+    const path = s.lastCap.path;
+    signedUrl(path).then(u => {
+      if (!u || th.dataset.path !== path) return;
+      let img = th.querySelector('img');
+      if (!img){ th.textContent = ''; img = document.createElement('img'); img.alt = 'Última foto de ' + s.nombre; th.appendChild(img); }
+      img.src = u;
+    });
+  }
+  th.querySelectorAll('.tag').forEach(x => x.remove());
+  if (s.oscura && !s.fin) th.appendChild(mk('span','tag','Imagen oscura'));
+
+  c.querySelector('.s-name').textContent = s.nombre;
+  const sub = c.querySelector('.s-sub'); sub.textContent = '';
+  sub.append(`${s.matricula}${s.grupo ? ' · ' + s.grupo : ''} `);
+  sub.append(mk('span', 'badge ' + st.k, st.txt));
+  const stats = c.querySelector('.s-stats'); stats.textContent = '';
+  stats.append(
+    mk('span','chip ' + (s.faltas >= CONFIG.MAX_VIOLATIONS ? 'danger' : s.faltas >= 3 ? 'warn' : ''), `Faltas ${s.faltas}/${CONFIG.MAX_VIOLATIONS}`),
+    mk('span','chip', `${s.contestadas}/${CONFIG.TOTAL_Q} contestadas`)
+  );
+  const tm = mk('span','chip'); tm.dataset.role = 'tiempo'; stats.append(tm);
+  const seen = mk('span','chip'); seen.dataset.role = 'visto'; stats.append(seen);
+  c.__s = s; tickCard(c);
+  applyFilter(c);
+}
+
+function tickCard(c){
+  const s = c.__s; if (!s) return;
+  const tm = c.querySelector('[data-role=tiempo]'), seen = c.querySelector('[data-role=visto]');
+  if (tm){
+    if (s.fin) tm.textContent = s.calif != null ? `Calif. ${s.calif}` : 'Finalizado';
+    else if (s.restante != null) tm.textContent = 'Resta ' + fmtTime(s.restante - (Date.now() - s.restanteAt)/1000);
+  }
+  if (seen) seen.textContent = s.fin ? '' : ago(Date.now() - s.lastSeen);
+  if (seen && !s.fin && Date.now() - s.lastSeen > CONFIG.OFFLINE_SECS*1000) seen.classList.add('warn'); else if (seen) seen.classList.remove('warn');
+}
+function tickAll(){
+  let changed = false;
+  cards.forEach((c, id) => {
+    const s = sessions.get(id), prev = c.dataset.estado;
+    if (!s.fin && estado(s).k !== prev){ renderCard(s); changed = true; } else tickCard(c);
+  });
+  if (changed){ sortCards(); updateCounts(); }
+}
+
+function sortCards(){
+  const rank = c => (c.classList.contains('crit') ? 0 : c.classList.contains('alert') ? 1 : c.dataset.estado === 'fin' ? 3 : 2);
+  [...cards.values()].sort((a,b) => rank(a) - rank(b) || a.dataset.texto.localeCompare(b.dataset.texto)).forEach(c => $('grid').appendChild(c));
+}
+function applyFilter(c){
+  const q = $('q').value.trim().toLowerCase(), f = $('flt').value;
+  let ok = !q || c.dataset.texto.includes(q);
+  if (f === 'activos') ok = ok && c.dataset.estado !== 'fin';
+  if (f === 'alerta') ok = ok && c.dataset.alerta === '1';
+  if (f === 'fin') ok = ok && c.dataset.estado === 'fin';
+  c.hidden = !ok;
+}
+function updateCounts(){
+  let act = 0, fin = 0;
+  sessions.forEach(s => { if (s.fin) fin++; else act++; });
+  $('counts').textContent = `${act} en curso · ${fin} finalizados`;
+  $('empty').hidden = sessions.size > 0;
+}
+function renderAll(){ sessions.forEach(renderCard); sortCards(); updateCounts(); }
+$('q').addEventListener('input', () => cards.forEach(applyFilter));
+$('flt').addEventListener('change', () => cards.forEach(applyFilter));
+
+/* ---------- Detalle ---------- */
+const dlg = $('dlg'); let dlgSession = null, dlgShown = 0; const PAGE = 48;
+$('dlg-close').addEventListener('click', () => dlg.close());
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+function openDetail(id){
+  const s = sessions.get(id); if (!s) return;
+  dlgSession = s; dlgShown = 0;
+  $('dlg-title').textContent = `${s.nombre} · ${s.matricula}`;
+  const st = estado(s), stats = $('dlg-stats'); stats.textContent = '';
+  stats.append(mk('span','badge ' + st.k, st.txt), mk('span','chip', `Faltas ${s.faltas}/${CONFIG.MAX_VIOLATIONS}`),
+    mk('span','chip', `${s.contestadas}/${CONFIG.TOTAL_Q} contestadas`), mk('span','chip', `${s.capturas.length} fotos`));
+  const fl = $('dlg-faltas'); fl.textContent = '';
+  if (!s.faltasLog.length) fl.append(mk('li','', 'Sin faltas.'));
+  s.faltasLog.forEach(f => fl.append(mk('li','', `${hhmm(f.t)} — ${f.motivo}`)));
+  $('dlg-gal').textContent = '';
+  loadMore(); dlg.showModal();
+}
+async function loadMore(){
+  const s = dlgSession; if (!s) return;
+  const list = [...s.capturas].sort((a,b) => b.t - a.t);
+  const slice = list.slice(dlgShown, dlgShown + PAGE); dlgShown += slice.length;
+  const urls = await Promise.all(slice.map(c => signedUrl(c.path)));
+  if (dlgSession !== s) return;
+  slice.forEach((c, i) => {
+    if (!urls[i]) return;
+    const a = mk('a', c.motivo === 'falta' ? 'f' : ''); a.href = urls[i]; a.target = '_blank'; a.rel = 'noopener';
+    const img = document.createElement('img'); img.src = urls[i]; img.loading = 'lazy'; img.alt = 'Foto de las ' + hhmm(c.t);
+    a.append(img, mk('span','', hhmm(c.t) + (c.motivo === 'falta' ? ' · falta' : c.oscura ? ' · oscura' : '')));
+    $('dlg-gal').appendChild(a);
+  });
+  $('dlg-more').hidden = dlgShown >= list.length;
+}
+$('dlg-more').addEventListener('click', loadMore);
+
+/* ---------- Pestañas y resultados ---------- */
+function tab(which){
+  $('view-live').hidden = which !== 'live'; $('view-res').hidden = which !== 'res';
+  $('tab-live').setAttribute('aria-pressed', which === 'live'); $('tab-res').setAttribute('aria-pressed', which === 'res');
+  if (which === 'res') loadResults();
+}
+$('tab-live').addEventListener('click', () => tab('live'));
+$('tab-res').addEventListener('click', () => tab('res'));
+$('res-reload').addEventListener('click', loadResults);
+
+async function loadResults(){
+  const { data, error } = await sb.from(CONFIG.RESULTS_TABLE).select('*').eq('examen', CONFIG.EXAM_ID).order('created_at', { ascending:false });
+  const body = $('res-body'); body.textContent = '';
+  if (error){ $('res-count').textContent = 'Error: ' + error.message; return; }
+  resultsCache = data; $('res-count').textContent = `${data.length} resultados`;
+  const motivos = { manual:'Entregó', tiempo:'Se acabó el tiempo', violaciones:'Terminado por faltas' };
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    [r.nombre, r.matricula, r.grupo || '', r.calificacion, `${r.aciertos}/${r.total_preguntas}`, motivos[r.motivo_fin] || r.motivo_fin,
+     r.num_faltas, r.duracion_seg != null ? fmtTime(r.duracion_seg) : '', new Date(r.created_at).toLocaleString('es-MX')]
+      .forEach((v, i) => { const td = mk('td', [3,4,6,7].includes(i) ? 'n' : '', String(v)); tr.appendChild(td); });
+    body.appendChild(tr);
+  });
+}
+$('res-csv').addEventListener('click', () => {
+  const head = ['nombre','matricula','grupo','calificacion','aciertos','total_preguntas','motivo_fin','num_faltas','duracion_seg','fecha'];
+  const esc = v => { let t = String(v ?? ''); if (/^[=+\-@]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g,'""') + '"'; };
+  const rows = resultsCache.map(r => [r.nombre, r.matricula, r.grupo, r.calificacion, r.aciertos, r.total_preguntas, r.motivo_fin, r.num_faltas, r.duracion_seg, r.created_at].map(esc).join(','));
+  const blob = new Blob(['\ufeff' + head.join(',') + '\n' + rows.join('\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `resultados_${CONFIG.EXAM_ID}.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+</script>
+</body>
+</html>
