@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Examen · Programación Avanzada · Tema 1 (GAB-2402)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#EDF0F5; --surface:#FFFFFF; --ink:#16202E; --muted:#566275; --line:#C9D1DD; --grid:#E6EAF1;
+  --accent:#0E7C6B; --accent-ink:#FFFFFF; --accent-soft:#D6EFEA;
+  --warn:#9A4A06; --warn-soft:#FBE6C4;
+  --danger:#B3261E; --danger-soft:#FBE0DD;
+  --focus:#1D4ED8;
+  --radius:10px;
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1620; --surface:#172231; --ink:#E7ECF3; --muted:#9AA7B8; --line:#2C3B50; --grid:#1B283A;
+    --accent:#34C3A8; --accent-ink:#06241F; --accent-soft:#123A35;
+    --warn:#F0B04A; --warn-soft:#3B2A0E;
+    --danger:#FF8A80; --danger-soft:#3D1815;
+    --focus:#7AA2FF;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-size:17px;line-height:1.5;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+h1,h2,h3{line-height:1.2;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+input[type=text]{font:inherit}
+
+/* Anti-copia: sin selección durante el examen */
+body[data-phase="exam"] .no-select,
+body[data-phase="exam"] .no-select *{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none }
+
+/* ---------- Pantallas de inicio / reanudar / resultado ---------- */
+.screen{max-width:760px;margin:0 auto;padding:40px 20px 56px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:28px}
+.title{font-size:clamp(1.7rem,4.5vw,2.4rem);font-weight:700;letter-spacing:-.01em}
+.subtitle{color:var(--muted);margin:8px 0 0}
+.facts{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 0;padding:0;list-style:none}
+.facts li{border:1px solid var(--line);border-radius:999px;padding:4px 14px;font-size:.95rem;background:var(--bg)}
+.rules{margin:26px 0 0;padding:18px 20px;border-left:5px solid var(--warn);background:var(--warn-soft);border-radius:0 var(--radius) var(--radius) 0}
+.rules h2{font-size:1.05rem;margin-bottom:8px}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:4px 0}
+form{margin-top:26px;display:grid;gap:16px}
+.field label{display:block;font-weight:700;margin-bottom:4px}
+.field input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:560px){.row2{grid-template-columns:1fr}}
+.check{display:flex;gap:10px;align-items:flex-start}
+.check input{margin-top:6px;width:18px;height:18px;accent-color:var(--accent)}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 18px;font-weight:700}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08);border-color:var(--accent)}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.big{padding:14px 22px;font-size:1.05rem}
+.msg{padding:12px 14px;border-radius:8px;font-size:.97rem}
+.msg.err{background:var(--danger-soft);color:var(--danger)}
+.msg.warn{background:var(--warn-soft);color:var(--warn)}
+.msg.ok{background:var(--accent-soft);color:var(--accent)}
+
+/* ---------- Examen ---------- */
+#screen-exam{min-height:100%}
+.hud{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding:10px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.hud-title{font-weight:700;font-size:1rem}
+.hud-title small{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+.hud-stats{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pill{border:1.5px solid var(--line);border-radius:999px;padding:4px 14px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.timer{font-size:1.15rem}
+.pill.low{border-color:var(--warn);background:var(--warn-soft);color:var(--warn)}
+.pill.faults.some{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.pill.faults.max{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+.progress{height:5px;background:var(--line)}
+.progress>div{height:100%;background:var(--accent);width:0;transition:width .25s}
+
+.layout{max-width:1120px;margin:0 auto;padding:22px 20px 40px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+
+.qcard{border:1px solid var(--line);border-radius:var(--radius);padding:26px;
+  background-color:var(--surface);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px}
+.qmeta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.95rem;margin-bottom:10px}
+.qmeta strong{color:var(--ink)}
+.qtext{font-size:clamp(1.15rem,2.6vw,1.4rem);font-weight:700;margin:0 0 20px;max-width:68ch}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%;
+  background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:13px 16px}
+.opt:hover{border-color:var(--ink)}
+.opt .chip{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:.95rem}
+.opt[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.opt[aria-checked="true"] .chip{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;align-items:center}
+.actions .spacer{flex:1}
+.btn.mark[aria-pressed="true"]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+
+.side{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:18px;position:sticky;top:84px}
+@media (max-width:900px){.side{position:static}}
+.side h2{font-size:1.05rem;margin-bottom:4px}
+.summary{color:var(--muted);font-size:.93rem;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.nb{position:relative;aspect-ratio:1;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-variant-numeric:tabular-nums}
+.nb:hover{border-color:var(--ink)}
+.nb[data-answered="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.nb[data-marked="true"]::after{content:"";position:absolute;top:-1px;right:-1px;width:0;height:0;
+  border-style:solid;border-width:0 15px 15px 0;border-color:transparent var(--warn) transparent transparent;border-top-right-radius:7px}
+.nb[aria-current="true"]{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--ink)}
+.legend{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:6px;font-size:.9rem;color:var(--muted)}
+.legend li{display:flex;gap:10px;align-items:center}
+.sw{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);position:relative;flex:none}
+.sw.a{background:var(--accent);border-color:var(--accent)}
+.sw.m::after{content:"";position:absolute;top:-1px;right:-1px;border-style:solid;border-width:0 9px 9px 0;border-color:transparent var(--warn) transparent transparent}
+.sw.c{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--ink)}
+.side .finish{width:100%;margin-top:18px}
+
+/* ---------- Overlays ---------- */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(10,16,26,.82);display:grid;place-items:center;padding:20px}
+.dialog{background:var(--surface);border-radius:var(--radius);max-width:480px;width:100%;padding:26px;border:1px solid var(--line)}
+.dialog h2{font-size:1.3rem;margin-bottom:8px}
+.dialog p{margin:8px 0 18px}
+.dialog .btns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;max-width:min(560px,92vw);
+  background:var(--danger);color:#fff;padding:12px 18px;border-radius:10px;font-weight:700;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+
+/* ---------- Resultado ---------- */
+.score{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin:16px 0 4px}
+.score .big{font-size:clamp(3.2rem,12vw,5.2rem);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.score .of{color:var(--muted);font-size:1.15rem}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+@media (max-width:560px){.stats{grid-template-columns:1fr}}
+.stat{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.stat b{display:block;font-size:1.4rem;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:.9rem}
+table.temas{width:100%;border-collapse:collapse;margin:8px 0 20px}
+.temas th,.temas td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left}
+.temas td:last-child,.temas th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.temas th{color:var(--muted);font-weight:400;font-size:.9rem}
+/* ---------- Cámara ---------- */
+.camtest{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:var(--radius);padding:14px;background:var(--bg)}
+@media (max-width:560px){.camtest{grid-template-columns:1fr}}
+.camvid{width:100%;aspect-ratio:4/3;object-fit:cover;background:#0A0F16;border-radius:8px;transform:scaleX(-1);display:block}
+.camtest p{margin:8px 0 0;font-size:.95rem;color:var(--muted)}
+.cam-box{position:relative;margin-bottom:16px}
+.cam-box .rec{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.68);color:#fff;font-size:.8rem;padding:2px 10px;border-radius:999px;display:flex;gap:6px;align-items:center}
+.cam-box .rec::before{content:"";width:8px;height:8px;border-radius:50%;background:#FF4D4D}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body data-phase="start">
+
+<!-- ================= INICIO ================= -->
+<main id="screen-start" class="screen">
+  <div class="card">
+    <h1 class="title">Examen: Fundamentos de Programación Avanzada y Manipulación de Datos</h1>
+    <p class="subtitle">Programación Avanzada · GAB-2402 · Ingeniería Informática</p>
+    <ul class="facts">
+      <li>30 preguntas</li>
+      <li>Opción múltiple</li>
+      <li>90 minutos</li>
+      <li>Tema 1 (subtemas 1.1, 1.2 y 1.3)</li>
+    </ul>
+
+    <div class="rules">
+      <h2>Reglas del examen</h2>
+      <ul>
+        <li>El examen se abre en pantalla completa y se mantiene así hasta que termines.</li>
+        <li>Debes mantener tu cámara web encendida y tu rostro visible. Mientras dure el examen se toman fotografías periódicas, y también al cometer una falta. Solo las ve tu docente.</li>
+        <li>Es una falta: salir de pantalla completa, minimizar, cambiar de pestaña o ventana, copiar, cortar o pegar, apagar o desconectar la cámara, y recargar la página.</li>
+        <li>Puedes cometer hasta 5 faltas. Con la sexta (más de 5), el examen termina automáticamente y verás tu resultado.</li>
+        <li>Puedes avanzar, regresar, cambiar respuestas y marcar preguntas para revisarlas. Las preguntas sin contestar valen cero.</li>
+        <li>Al terminar el tiempo, el examen se entrega solo. Tu resultado se guarda en línea.</li>
+      </ul>
+    </div>
+
+    <div id="cfg-warn" class="msg warn" hidden style="margin-top:18px"></div>
+    <div id="fs-warn" class="msg err" hidden style="margin-top:18px">Este navegador o dispositivo no permite pantalla completa. Usa una computadora con Chrome, Edge o Firefox.</div>
+
+    <form id="start-form" autocomplete="off" novalidate>
+      <div class="field">
+        <label for="f-nombre">Nombre completo</label>
+        <input id="f-nombre" type="text" required maxlength="120">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="f-matricula">Matrícula o número de control</label>
+          <input id="f-matricula" type="text" required maxlength="30">
+        </div>
+        <div class="field">
+          <label for="f-grupo">Grupo</label>
+          <input id="f-grupo" type="text" maxlength="30">
+        </div>
+      </div>
+      <div class="camtest" id="camtest">
+        <video id="cam-test" class="camvid" autoplay muted playsinline></video>
+        <div>
+          <button class="btn" id="btn-cam" type="button">Activar y probar cámara</button>
+          <p id="cam-status">Antes de iniciar, comprueba que tu rostro se vea con buena iluminación.</p>
+        </div>
+      </div>
+      <label class="check"><input id="f-camara" type="checkbox"><span>Autorizo que se active mi cámara web durante el examen y que se tomen fotografías periódicas, que verá únicamente mi docente para supervisar la aplicación del examen.</span></label>
+      <label class="check"><input id="f-acepto" type="checkbox"><span>Leí las reglas y acepto que las faltas se registran junto con mi resultado.</span></label>
+      <div id="start-err" class="msg err" hidden></div>
+      <button class="btn primary big" id="btn-start" type="submit">Iniciar examen en pantalla completa</button>
+    </form>
+  </div>
+</main>
+
+<!-- ================= REANUDAR ================= -->
+<main id="screen-resume" class="screen" hidden>
+  <div class="card">
+    <h1 class="title">Tienes un examen en curso</h1>
+    <p class="subtitle">Se detectó que la página se cerró o se recargó. Eso cuenta como una falta y se volverá a pedir acceso a tu cámara.</p>
+    <div class="stats">
+      <div class="stat"><b id="rs-time">--:--</b><span>Tiempo restante</span></div>
+      <div class="stat"><b id="rs-ans">0 / 30</b><span>Contestadas</span></div>
+      <div class="stat"><b id="rs-faults">0 / 5</b><span>Faltas (sin contar esta)</span></div>
+    </div>
+    <div id="resume-err" class="msg err" hidden></div>
+    <button class="btn primary big" id="btn-resume" type="button">Continuar en pantalla completa</button>
+  </div>
+</main>
+
+<!-- ================= EXAMEN ================= -->
+<div id="screen-exam" hidden class="no-select">
+  <header class="hud">
+    <div class="hud-title">Programación Avanzada · Tema 1<small id="hud-student"></small></div>
+    <div class="hud-stats">
+      <span class="pill" id="hud-answered">0 / 30 contestadas</span>
+      <span class="pill faults" id="hud-faults">Faltas 0 / 5</span>
+      <span class="pill timer" id="hud-timer" role="timer" aria-live="off">90:00</span>
+    </div>
+  </header>
+  <div class="progress" aria-hidden="true"><div id="hud-bar"></div></div>
+
+  <div class="layout">
+    <section class="qcard" aria-labelledby="q-text">
+      <div class="qmeta">
+        <strong id="q-num">Pregunta 1 de 30</strong>
+        <span id="q-tema"></span>
+      </div>
+      <h2 class="qtext" id="q-text"></h2>
+      <div class="opts" id="q-opts" role="radiogroup" aria-labelledby="q-text"></div>
+      <div class="actions">
+        <button class="btn" id="btn-prev" type="button">Anterior</button>
+        <button class="btn" id="btn-next" type="button">Siguiente</button>
+        <span class="spacer"></span>
+        <button class="btn" id="btn-clear" type="button">Borrar respuesta</button>
+        <button class="btn mark" id="btn-mark" type="button" aria-pressed="false">Marcar para revisar</button>
+      </div>
+    </section>
+
+    <aside class="side" aria-label="Estado de las preguntas">
+      <div class="cam-box">
+        <video id="cam" class="camvid" autoplay muted playsinline></video>
+        <span class="rec">Cámara activa</span>
+      </div>
+      <h2>Estado de las preguntas</h2>
+      <p class="summary" id="nav-summary"></p>
+      <div class="grid" id="nav-grid"></div>
+      <ul class="legend">
+        <li><span class="sw"></span>Sin contestar</li>
+        <li><span class="sw a"></span>Contestada</li>
+        <li><span class="sw m"></span>Marcada para revisar</li>
+        <li><span class="sw c"></span>Pregunta actual</li>
+      </ul>
+      <button class="btn primary finish" id="btn-finish" type="button">Entregar examen</button>
+    </aside>
+  </div>
+</div>
+
+<!-- ================= RESULTADO ================= -->
+<main id="screen-result" class="screen" hidden>
+  <div class="card">
+    <h1 class="title" id="res-title">Examen terminado</h1>
+    <p class="subtitle" id="res-reason"></p>
+    <div class="score"><span class="big" id="res-grade">0</span><span class="of">de 100 · <span id="res-hits"></span></span></div>
+    <div class="stats">
+      <div class="stat"><b id="res-ok">0</b><span>Respuestas correctas</span></div>
+      <div class="stat"><b id="res-faults">0</b><span>Faltas registradas</span></div>
+      <div class="stat"><b id="res-time">--</b><span>Tiempo usado</span></div>
+    </div>
+    <h2 style="font-size:1.05rem">Aciertos por tema</h2>
+    <table class="temas"><thead><tr><th>Tema</th><th>Aciertos</th></tr></thead><tbody id="res-temas"></tbody></table>
+    <div id="save-status" class="msg" aria-live="polite"></div>
+    <div style="margin-top:12px"><button class="btn" id="btn-retry" type="button" hidden>Reintentar guardado</button></div>
+    <p class="subtitle" style="margin-top:20px">Ya puedes cerrar esta página.</p>
+  </div>
+</main>
+
+<!-- ================= OVERLAYS ================= -->
+<div id="fs-overlay" class="overlay" hidden role="alertdialog" aria-modal="true" aria-labelledby="fs-title">
+  <div class="dialog">
+    <h2 id="fs-title">Saliste de la pantalla completa</h2>
+    <p>Se registró una falta. El tiempo sigue corriendo. Vuelve a pantalla completa para continuar.</p>
+    <div class="btns"><button class="btn primary" id="btn-fs" type="button">Volver a pantalla completa</button></div>
+  </div>
+</div>
+
+<div id="cam-overlay" class="overlay" hidden role="alertdialog" aria-modal="true" aria-labelledby="cam-title">
+  <div class="dialog">
+    <h2 id="cam-title">Se perdió la señal de la cámara</h2>
+    <p>Se registró una falta. El tiempo sigue corriendo. Reactiva la cámara y deja tu rostro visible para continuar.</p>
+    <p id="cam-retry-err" class="msg err" hidden></p>
+    <div class="btns"><button class="btn primary" id="btn-cam-retry" type="button">Reactivar cámara</button></div>
+  </div>
+</div>
+<canvas id="cap-canvas" hidden></canvas>
+
+<div id="confirm-overlay" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="cf-title">
+  <div class="dialog">
+    <h2 id="cf-title">¿Entregar el examen?</h2>
+    <p id="cf-text"></p>
+    <div class="btns">
+      <button class="btn" id="btn-cf-no" type="button">Seguir revisando</button>
+      <button class="btn danger" id="btn-cf-yes" type="button">Entregar examen</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="alert" hidden></div>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN  ← edita solo este bloque
+   ===================================================================== */
+const CONFIG = {
+  SUPABASE_URL: 'https://pwbjvvjmocnjmkkyokrw.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_icxQRBw8vcE6r-oULCO0Lg_UZ5Dnj6q',
+  TABLE: 'resultados_examen',
+  EXAM_ID: 'GAB-2402-T1',
+  DURATION_MIN: 90,
+  MAX_VIOLATIONS: 5,      // el examen termina cuando las faltas son MÁS de este valor
+  COOLDOWN_MS: 1500,      // eventos simultáneos (minimizar + perder foco + salir de FS) cuentan como 1 falta
+
+  // --- Cámara y monitoreo ---
+  CAMERA_REQUIRED: true,  // si es false, la cámara no se exige (no recomendado)
+  CAPTURE_SECS: 20,       // cada cuántos segundos se toma una foto
+  HEARTBEAT_SECS: 15,     // cada cuántos segundos se reporta el estado al panel del docente
+  CAPTURE_W: 320,         // ancho en px de la foto (más grande = más almacenamiento)
+  JPEG_QUALITY: 0.6,
+  DARK_THRESHOLD: 18,     // brillo promedio (0-255) bajo el cual se marca la imagen como "oscura"
+  BUCKET: 'capturas-examen',
+  EVENTS_TABLE: 'monitoreo_eventos'
+};
+
+/* =====================================================================
+   BANCO DE PREGUNTAS  (a = índice de la opción correcta, empezando en 0)
+   El orden de preguntas y opciones se mezcla para cada alumno.
+   ===================================================================== */
+const T1 = "1.1 Python avanzado";
+const T2 = "1.2 NumPy y Pandas";
+const T3 = "1.3 Limpieza de datos";
+
+const QUESTIONS = [
+  // ========== 1.1 Introducción a la programación avanzada con Python (10) ==========
+  {tema:T1, q:"¿Cuál es el resultado de la siguiente comprensión de listas?\n[x**2 for x in range(10) if x % 2 == 0]",
+   o:["[0, 4, 16, 36, 64]","[1, 4, 9, 16, 25]","[0, 1, 4, 9, 16]","[2, 4, 6, 8, 10]"], a:0},
+  {tema:T1, q:"En Python, ¿qué operador de conjuntos se usa para obtener la intersección de dos sets a y b?",
+   o:["a | b","a & b","a - b","a ^ b"], a:1},
+  {tema:T1, q:"¿Para qué se utilizan principalmente las dataclasses en Python 3.7+?",
+   o:["Para crear estructuras de datos inmutables o con menos código repetitivo (boilerplate)","Para definir generadores de forma más rápida","Para reemplazar completamente a los diccionarios","Para ejecutar código en paralelo automáticamente"], a:0},
+  {tema:T1, q:"¿Qué permite la sintaxis *args en la definición de una función?",
+   o:["Recibir un número variable de argumentos posicionales como una tupla","Recibir solo argumentos nombrados obligatorios","Convertir automáticamente todos los argumentos a listas","Forzar que la función no reciba ningún argumento"], a:0},
+  {tema:T1, q:"¿Cuál es el propósito principal de una función generadora que usa yield?",
+   o:["Generar secuencias de forma perezosa (lazy), produciendo un valor a la vez y ahorrando memoria","Ejecutar la función en un hilo separado","Almacenar todos los resultados en una lista antes de devolverlos","Reemplazar las list comprehensions en todos los casos"], a:0},
+  {tema:T1, q:"En el manejo de excepciones, ¿cuándo se ejecuta el bloque else de un try/except?",
+   o:["Solo si no se lanzó ninguna excepción en el bloque try","Siempre, al final del try","Solo si se captura una excepción específica","Únicamente cuando hay un finally"], a:0},
+  {tema:T1, q:"¿Qué hace un decorador en Python?",
+   o:["Modifica o extiende el comportamiento de una función o método sin cambiar su código fuente","Elimina automáticamente las variables locales al terminar la función","Convierte cualquier función en un generador","Obliga a que la función reciba type hints"], a:0},
+  {tema:T1, q:"Según las buenas prácticas (PEP 8), ¿cómo se nombran las variables y funciones en Python?",
+   o:["snake_case","CamelCase","PascalCase","UPPER_CASE"], a:0},
+  {tema:T1, q:"¿Cuál es el resultado de aplicar filter y map de la siguiente forma?\nnumeros = [1, 2, 3, 4, 5, 6]\npares = list(filter(lambda x: x % 2 == 0, numeros))\ncuadrados = list(map(lambda x: x**2, pares))",
+   o:["[4, 16, 36]","[1, 4, 9, 16, 25, 36]","[2, 4, 6]","[4, 16, 36, 64]"], a:0},
+  {tema:T1, q:"¿Qué ventaja principal ofrecen los type hints (anotaciones de tipo) en Python?",
+   o:["Mejoran la claridad del código y permiten que herramientas de análisis estático detecten errores","Hacen que el intérprete sea más rápido en tiempo de ejecución","Obligan a que todas las variables sean inmutables","Reemplazan la necesidad de docstrings"], a:0},
+
+  // ========== 1.2 Manipulación avanzada con NumPy y Pandas (10) ==========
+  {tema:T2, q:"En NumPy, ¿qué atributo de un array devuelve una tupla con el número de elementos en cada dimensión?",
+   o:["shape","size","ndim","dtype"], a:0},
+  {tema:T2, q:"¿Cuál es la principal ventaja de las operaciones vectorizadas de NumPy frente a un bucle for puro de Python?",
+   o:["Son mucho más rápidas porque están implementadas en C (típicamente 10–100×)","Ocupan menos memoria en todos los casos","Permiten usar índices negativos","Funcionan solo con arrays de una dimensión"], a:0},
+  {tema:T2, q:"En Pandas, ¿qué método se usa para seleccionar filas y columnas por etiqueta?",
+   o:["loc","iloc","query","filter"], a:0},
+  {tema:T2, q:"¿Qué instrucción de Pandas cuenta los valores nulos por columna de un DataFrame df?",
+   o:["df.isnull().sum()","df.count_null()","df.nulls()","df.describe(nulls=True)"], a:0},
+  {tema:T2, q:"¿Cuál es la diferencia principal entre loc e iloc en un DataFrame de Pandas?",
+   o:["loc usa etiquetas (labels); iloc usa posiciones enteras basadas en 0","loc es más lento; iloc es más rápido siempre","loc solo funciona con Series; iloc solo con DataFrames","No hay diferencia; son alias"], a:0},
+  {tema:T2, q:"En Pandas, ¿qué función se utiliza para combinar dos DataFrames basándose en una columna llave común (similar a un JOIN de SQL)?",
+   o:["pd.merge()","pd.concat()","pd.join_all()","pd.append()"], a:0},
+  {tema:T2, q:"¿Qué hace el siguiente código de Pandas?\ndf.groupby(\"ciudad\")[\"salario\"].mean()",
+   o:["Calcula el salario promedio por cada valor único de la columna ciudad","Ordena el DataFrame por ciudad y luego por salario","Elimina las filas donde ciudad o salario son nulos","Crea una tabla pivote con ciudades en columnas"], a:0},
+  {tema:T2, q:"En NumPy, ¿qué genera np.linspace(0, 1, 5)?",
+   o:["Un array de 5 valores equiespaciados entre 0 y 1 (incluidos)","Un array con los enteros del 0 al 1","Una matriz identidad de 5×5","Un array aleatorio de 5 elementos"], a:0},
+  {tema:T2, q:"¿Qué método de Pandas se usa comúnmente para aplicar una función a cada elemento de una Serie o a cada fila/columna de un DataFrame?",
+   o:["apply","map_reduce","transform_all","foreach"], a:0},
+  {tema:T2, q:"En el flujo típico de trabajo con Pandas, ¿cuál es el orden recomendado de pasos?",
+   o:["Cargar → Explorar → Limpiar → Transformar → Analizar/Visualizar/Modelar","Modelar → Limpiar → Cargar → Visualizar","Limpiar → Cargar → Modelar → Explorar","Visualizar → Cargar → Limpiar → Explorar"], a:0},
+
+  // ========== 1.3 Operaciones de limpieza, transformación y preparación (10) ==========
+  {tema:T3, q:"Según la regla del rango intercuartílico (IQR), un valor se considera atípico (outlier) si queda fuera del intervalo:",
+   o:["[Q1 − 1.5·IQR, Q3 + 1.5·IQR]","[Q1 − IQR, Q3 + IQR]","[media − 2·desviación, media + 2·desviación]","[mínimo, máximo]"], a:0},
+  {tema:T3, q:"¿Qué estrategia de imputación de valores faltantes es generalmente más robusta ante outliers en una variable numérica?",
+   o:["Usar la mediana","Usar la media aritmética","Rellenar con cero","Eliminar siempre toda la fila"], a:0},
+  {tema:T3, q:"¿Qué hace el método df.drop_duplicates(subset=[\"email\"], keep=\"first\")?",
+   o:["Elimina las filas duplicadas considerando solo la columna email, conservando la primera aparición","Elimina todas las columnas excepto email","Marca los duplicados pero no los elimina","Elimina la primera aparición y conserva las posteriores"], a:0},
+  {tema:T3, q:"Al aplicar normalización Min-Max a un valor x = 30, con mínimo = 10 y máximo = 50, ¿qué valor se obtiene?",
+   o:["0.5","0.3","1.0","30"], a:0},
+  {tema:T3, q:"Después de estandarizar una variable con Z-score (restar la media y dividir entre la desviación estándar), la variable resultante tiene aproximadamente:",
+   o:["Media 0 y desviación estándar 1","Media 0 y valores entre 0 y 1","Media 1 y desviación 0","Valores solo positivos"], a:0},
+  {tema:T3, q:"Para codificar una variable categórica nominal (sin orden, por ejemplo color o ciudad) y usarla en un algoritmo numérico, ¿qué técnica es más adecuada?",
+   o:["One-Hot Encoding (pd.get_dummies)","Label Encoding simple sin considerar el orden","Dejarla como texto","Convertirla a float directamente"], a:0},
+  {tema:T3, q:"¿Qué hace pd.to_datetime(df[\"fecha\"], errors=\"coerce\")?",
+   o:["Convierte la columna a tipo datetime y pone NaT en los valores que no se pueden convertir","Elimina las filas con fechas inválidas","Lanza siempre un error si hay un valor no convertible","Convierte las fechas a enteros Unix"], a:0},
+  {tema:T3, q:"En el contexto de feature engineering básico, ¿qué hace pd.cut(df[\"edad\"], bins=[0, 25, 35, 50, 100], labels=[\"Joven\", \"Adulto joven\", \"Adulto\", \"Senior\"])?",
+   o:["Discretiza la edad en intervalos (bins) y asigna etiquetas categóricas","Calcula el promedio de edad por grupo","Elimina las edades fuera del rango 0-100","Normaliza la edad entre 0 y 1"], a:0},
+  {tema:T3, q:"¿Cuál de las siguientes es una buena práctica al construir un pipeline de limpieza de datos?",
+   o:["Encapsular los pasos en funciones o en un Pipeline de scikit-learn para que sea reproducible","Aplicar todos los cambios directamente sobre el DataFrame original sin copia","Imputar siempre con la media sin explorar primero","Eliminar todas las filas que tengan cualquier valor nulo sin analizar el impacto"], a:0},
+  {tema:T3, q:"En el método Z-score para detección de outliers, ¿qué umbral se suele usar comúnmente para considerar un valor como atípico?",
+   o:["|z| > 3","|z| > 0.5","|z| > 10","z > 0"], a:0}
+];
+const N = QUESTIONS.length; // 30
+
+/* =====================================================================
+   ESTADO
+   ===================================================================== */
+const LS_KEY = 'gab2402_t1_sesion_v1';
+const LETTERS = ['A','B','C','D'];
+const $ = id => document.getElementById(id);
+let S = null;            // sesión del alumno
+let phase = 'start';     // start | resume | exam | result
+let timerId = null, lastV = 0, toastT = null;
+let sb = null;
+
+const CONFIGURED = !CONFIG.SUPABASE_URL.includes('TU-PROYECTO') && !CONFIG.SUPABASE_ANON_KEY.startsWith('TU_');
+if (CONFIGURED && window.supabase) sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+const FS_OK = !!document.documentElement.requestFullscreen;
+
+/* =====================================================================
+   CÁMARA Y MONITOREO
+   ===================================================================== */
+let camStream = null, capTimer = null, hbTimer = null;
+const capCanvas = $('cap-canvas');
+const CAM_OK = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+const camLive = () => !!camStream && camStream.getVideoTracks().some(t => t.readyState === 'live' && !t.muted);
+
+async function startCamera(){
+  if (!CAM_OK) return false;
+  try{
+    stopCamera();
+    camStream = await navigator.mediaDevices.getUserMedia({ video:{ width:{ideal:640}, height:{ideal:480}, facingMode:'user' }, audio:false });
+    camStream.getVideoTracks().forEach(t => {
+      t.addEventListener('ended', onCamLost);
+      t.addEventListener('mute', onCamLost);
+      t.addEventListener('unmute', onCamBack);
+    });
+    ['cam-test','cam'].forEach(id => { const v = $(id); v.srcObject = camStream; v.play().catch(()=>{}); });
+    return true;
+  }catch(e){ return false; }
+}
+function stopCamera(){
+  if (camStream){ camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  $('cam-test').srcObject = null; $('cam').srcObject = null;
+}
+function onCamLost(){
+  if (phase !== 'exam' || !S || S.finished) return;
+  $('cam-overlay').hidden = false;
+  sendEvent('camara_off');
+  violation('apagaste, tapaste o desconectaste la cámara');
+}
+function onCamBack(){
+  if (phase === 'exam' && camLive()){ $('cam-overlay').hidden = true; sendEvent('camara_on'); }
+}
+function attachExamCam(){
+  const v = $('cam');
+  if (camStream){ v.srcObject = camStream; v.play().catch(()=>{}); }
+  if (CONFIG.CAMERA_REQUIRED && !camLive()) $('cam-overlay').hidden = false;
+}
+
+// Toma una foto del video visible. El dibujo es síncrono, por lo que funciona aunque se apague la cámara justo después.
+function captureFrame(){
+  return new Promise(res => {
+    try{
+      const v = phase === 'exam' ? $('cam') : $('cam-test');
+      if (!v || !v.videoWidth || !camLive()) return res(null);
+      const w = CONFIG.CAPTURE_W, h = Math.round(w * v.videoHeight / v.videoWidth);
+      capCanvas.width = w; capCanvas.height = h;
+      const ctx = capCanvas.getContext('2d', { willReadFrequently:true });
+      ctx.drawImage(v, 0, 0, w, h);
+      const d = ctx.getImageData(0, 0, w, h).data; let sum = 0, c = 0;
+      for (let i=0; i<d.length; i+=64){ sum += 0.2126*d[i] + 0.7152*d[i+1] + 0.0722*d[i+2]; c++; }
+      const dark = (sum / c) < CONFIG.DARK_THRESHOLD;
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, h-18, w, 18);
+      ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif';
+      ctx.fillText(new Date().toLocaleString('es-MX') + (S ? ' · ' + S.matricula : ''), 6, h-5);
+      capCanvas.toBlob(b => res(b ? { blob:b, dark } : null), 'image/jpeg', CONFIG.JPEG_QUALITY);
+    }catch(e){ res(null); }
+  });
+}
+
+function sendEvent(tipo, detalle = {}, path = null){
+  if (!sb || !S) return Promise.resolve();
+  return sb.from(CONFIG.EVENTS_TABLE).insert([{
+    sesion_id: S.id, examen: CONFIG.EXAM_ID, nombre: S.nombre, matricula: S.matricula, grupo: S.grupo || null,
+    tipo, contestadas: answeredCount(), faltas: S.violations.length,
+    restante_seg: S.finished ? 0 : Math.max(0, Math.round(remainingMs()/1000)),
+    detalle, storage_path: path
+  }]).then(({ error }) => { if (error) console.warn('evento', tipo, error.message); }).catch(() => {});
+}
+
+async function captureAndSend(motivo){
+  const f = await captureFrame();
+  if (!f || !sb || !S) return;
+  const path = `${CONFIG.EXAM_ID}/${S.id}/${Date.now()}_${motivo}.jpg`;
+  try{
+    const { error } = await sb.storage.from(CONFIG.BUCKET).upload(path, f.blob, { contentType:'image/jpeg', upsert:false });
+    if (error){ console.warn('captura', error.message); return; }
+    sendEvent('captura', { motivo, oscura: f.dark }, path);
+  }catch(e){ console.warn('captura', e); }
+}
+
+function startMonitoring(){
+  clearInterval(capTimer); clearInterval(hbTimer);
+  sendEvent('inicio', { ua: navigator.userAgent });
+  setTimeout(() => captureAndSend('inicio'), 1500);
+  capTimer = setInterval(() => captureAndSend('periodica'), CONFIG.CAPTURE_SECS*1000);
+  hbTimer  = setInterval(() => sendEvent('latido'), CONFIG.HEARTBEAT_SECS*1000);
+}
+function notifyViolation(reason, n){ sendEvent('falta', { motivo:reason, n }); captureAndSend('falta'); }
+function monitorFinish(){
+  clearInterval(capTimer); clearInterval(hbTimer);
+  captureAndSend('fin');
+  sendEvent('fin', { motivo: S.reason, calificacion: S.result ? S.result.calificacion : null });
+  stopCamera();
+}
+
+$('btn-cam').addEventListener('click', async () => {
+  const st = $('cam-status'); st.textContent = 'Solicitando acceso a la cámara…';
+  const ok = await startCamera();
+  if (!ok){ st.textContent = 'No se pudo activar la cámara. Permite el acceso desde el candado de la barra de direcciones y vuelve a intentarlo.'; return; }
+  $('btn-cam').textContent = 'Probar de nuevo';
+  await new Promise(r => setTimeout(r, 900));
+  const f = await captureFrame();
+  st.textContent = (f && f.dark)
+    ? 'La cámara funciona, pero la imagen se ve muy oscura. Mejora la iluminación.'
+    : 'Cámara lista. Confirma que tu rostro se ve completo y bien iluminado.';
+});
+$('btn-cam-retry').addEventListener('click', async () => {
+  const e = $('cam-retry-err'); e.hidden = true;
+  const ok = await startCamera();
+  if (ok){ $('cam-overlay').hidden = true; sendEvent('camara_on'); }
+  else { e.textContent = 'No se pudo activar la cámara. Revisa los permisos del navegador e inténtalo de nuevo.'; e.hidden = false; }
+});
+
+function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+function loadSession(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)); }catch(e){ return null; } }
+function show(name){
+  ['start','resume','exam','result'].forEach(n => $('screen-'+n).hidden = (n !== name));
+  phase = name; document.body.dataset.phase = name; window.scrollTo(0,0);
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function uuid(){
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);});
+}
+const remainingMs = () => S.startedAt + CONFIG.DURATION_MIN*60000 - Date.now();
+function fmt(ms){
+  ms = Math.max(0, ms); const t = Math.ceil(ms/1000);
+  const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = t%60;
+  const p = n => String(n).padStart(2,'0');
+  return h ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+}
+const answeredCount = () => Object.keys(S.answers).length;
+
+/* =====================================================================
+   INICIO
+   ===================================================================== */
+function init(){
+  if (!CONFIGURED){
+    const w = $('cfg-warn'); w.hidden = false;
+    w.textContent = 'Aviso para el docente: falta configurar Supabase en index.html (SUPABASE_URL y SUPABASE_ANON_KEY). Sin eso, los resultados no se guardarán.';
+  }
+  if (!FS_OK){ $('fs-warn').hidden = false; $('btn-start').disabled = true; }
+  if (CONFIG.CAMERA_REQUIRED && !CAM_OK){
+    $('cam-status').textContent = 'Este navegador no permite usar la cámara (se requiere HTTPS y un navegador actualizado).';
+    $('btn-cam').disabled = true; $('btn-start').disabled = true;
+  }
+  if (!CONFIG.CAMERA_REQUIRED){ $('camtest').hidden = true; $('f-camara').closest('label').hidden = true; }
+
+  S = loadSession();
+  if (S && S.finished){
+    renderResult();
+    if (!S.saved) saveResult();
+    return;
+  }
+  if (S && !S.finished){
+    if (remainingMs() <= 0){ finish('tiempo'); return; }
+    $('rs-time').textContent = fmt(remainingMs());
+    $('rs-ans').textContent = `${answeredCount()} / ${N}`;
+    $('rs-faults').textContent = `${S.violations.length} / ${CONFIG.MAX_VIOLATIONS}`;
+    show('resume');
+    return;
+  }
+  show('start');
+}
+
+$('start-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const nombre = $('f-nombre').value.trim(), matricula = $('f-matricula').value.trim(), grupo = $('f-grupo').value.trim();
+  const err = $('start-err'); err.hidden = true;
+  if (nombre.length < 5 || !matricula){ err.textContent = 'Escribe tu nombre completo y tu matrícula.'; err.hidden = false; return; }
+  if (!$('f-acepto').checked){ err.textContent = 'Marca la casilla para aceptar las reglas.'; err.hidden = false; return; }
+  if (CONFIG.CAMERA_REQUIRED){
+    if (!$('f-camara').checked){ err.textContent = 'Marca la casilla que autoriza el uso de la cámara.'; err.hidden = false; return; }
+    if (!camLive()){ err.textContent = 'Activa y prueba tu cámara antes de iniciar.'; err.hidden = false; return; }
+  }
+
+  const order = shuffle([...QUESTIONS.keys()]).map(i => ({ i, perm: shuffle([0,1,2,3]) }));
+  S = { id: uuid(), nombre, matricula, grupo, startedAt: Date.now(), order, answers:{}, marks:{}, violations:[], current:0, finished:false, saved:false };
+  persist();
+
+  const ok = await enterFs();
+  if (!ok){
+    localStorage.removeItem(LS_KEY); S = null;
+    err.textContent = 'No se pudo activar la pantalla completa. Permítelo en el navegador e inténtalo de nuevo.'; err.hidden = false; return;
+  }
+  beginExam();
+});
+
+$('btn-resume').addEventListener('click', async () => {
+  const e = $('resume-err'); e.hidden = true;
+  // Ambas solicitudes se inician dentro del mismo clic para conservar el permiso de pantalla completa
+  const fsP = enterFs(), camP = CONFIG.CAMERA_REQUIRED ? startCamera() : Promise.resolve(true);
+  const [ok, camOk] = await Promise.all([fsP, camP]);
+  if (!ok){ e.textContent = 'No se pudo activar la pantalla completa. Inténtalo de nuevo.'; e.hidden = false; return; }
+  if (!camOk){
+    if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+    e.textContent = 'No se pudo activar la cámara. Permite el acceso y vuelve a intentarlo.'; e.hidden = false; return;
+  }
+  S.violations.push({ t:new Date().toISOString(), reason:'Recarga o cierre de la página durante el examen' });
+  persist();
+  if (S.violations.length > CONFIG.MAX_VIOLATIONS){ finish('violaciones'); return; }
+  beginExam();
+  notifyViolation('recarga de la página', S.violations.length);
+  toast(`Falta ${S.violations.length} de ${CONFIG.MAX_VIOLATIONS}: recargaste la página.`);
+});
+
+async function enterFs(){
+  try{ await document.documentElement.requestFullscreen({ navigationUI:'hide' }); return true; }
+  catch(e){ try{ await document.documentElement.requestFullscreen(); return true; }catch(e2){ return false; } }
+}
+
+function beginExam(){
+  show('exam');
+  lastV = Date.now();
+  $('hud-student').textContent = `${S.nombre} · ${S.matricula}`;
+  renderAll();
+  attachExamCam();
+  startMonitoring();
+  if (!document.fullscreenElement) $('fs-overlay').hidden = false;
+  clearInterval(timerId);
+  tick(); timerId = setInterval(tick, 500);
+}
+
+function tick(){
+  if (!S || S.finished) return;
+  const r = remainingMs();
+  if (r <= 0){ finish('tiempo'); return; }
+  const el = $('hud-timer'); el.textContent = fmt(r);
+  el.classList.toggle('low', r <= 10*60000);
+}
+
+/* =====================================================================
+   RENDER DEL EXAMEN
+   ===================================================================== */
+function renderAll(){ renderHud(); renderQuestion(); renderNav(); }
+
+function renderHud(){
+  const a = answeredCount();
+  $('hud-answered').textContent = `${a} / ${N} contestadas`;
+  $('hud-bar').style.width = (a/N*100) + '%';
+  const v = S.violations.length, f = $('hud-faults');
+  f.textContent = `Faltas ${v} / ${CONFIG.MAX_VIOLATIONS}`;
+  f.classList.toggle('some', v > 0 && v < CONFIG.MAX_VIOLATIONS);
+  f.classList.toggle('max', v >= CONFIG.MAX_VIOLATIONS);
+}
+
+function renderQuestion(){
+  const pos = S.current, ent = S.order[pos], q = QUESTIONS[ent.i];
+  $('q-num').textContent = `Pregunta ${pos+1} de ${N}`;
+  $('q-tema').textContent = q.tema;
+  $('q-text').textContent = q.q;
+  const box = $('q-opts'); box.textContent = '';
+  ent.perm.forEach((orig, d) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'opt'; b.setAttribute('role','radio');
+    b.setAttribute('aria-checked', S.answers[pos] === d ? 'true' : 'false');
+    const chip = document.createElement('span'); chip.className = 'chip'; chip.textContent = LETTERS[d];
+    const txt = document.createElement('span'); txt.textContent = q.o[orig];
+    b.append(chip, txt);
+    b.addEventListener('click', () => selectAnswer(d));
+    box.appendChild(b);
+  });
+  $('btn-prev').disabled = pos === 0;
+  $('btn-next').disabled = pos === N-1;
+  $('btn-clear').disabled = S.answers[pos] === undefined;
+  const m = !!S.marks[pos];
+  $('btn-mark').setAttribute('aria-pressed', m);
+  $('btn-mark').textContent = m ? 'Quitar marca' : 'Marcar para revisar';
+}
+
+function renderNav(){
+  const grid = $('nav-grid'); grid.textContent = '';
+  let marked = 0;
+  for (let p=0; p<N; p++){
+    const ans = S.answers[p] !== undefined, mk = !!S.marks[p];
+    if (mk) marked++;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'nb'; b.textContent = p+1;
+    b.dataset.answered = ans; b.dataset.marked = mk;
+    if (p === S.current) b.setAttribute('aria-current','true');
+    const st = (ans ? 'contestada' : 'sin contestar') + (mk ? ', marcada para revisar' : '');
+    b.setAttribute('aria-label', `Pregunta ${p+1}: ${st}`); b.title = `Pregunta ${p+1}: ${st}`;
+    b.addEventListener('click', () => goTo(p));
+    grid.appendChild(b);
+  }
+  const a = answeredCount();
+  $('nav-summary').textContent = `${a} contestadas · ${N-a} sin contestar · ${marked} marcadas`;
+}
+
+function goTo(p){ if (p<0 || p>=N) return; S.current = p; persist(); renderQuestion(); renderNav(); }
+function selectAnswer(d){ S.answers[S.current] = d; persist(); renderHud(); renderQuestion(); renderNav(); }
+
+$('btn-prev').addEventListener('click', () => goTo(S.current-1));
+$('btn-next').addEventListener('click', () => goTo(S.current+1));
+$('btn-clear').addEventListener('click', () => { delete S.answers[S.current]; persist(); renderAll(); });
+$('btn-mark').addEventListener('click', () => {
+  if (S.marks[S.current]) delete S.marks[S.current]; else S.marks[S.current] = true;
+  persist(); renderQuestion(); renderNav();
+});
+
+/* Entrega manual */
+$('btn-finish').addEventListener('click', () => {
+  const a = answeredCount(), sin = N - a, mk = Object.keys(S.marks).length;
+  let t = sin ? `Te faltan ${sin} pregunta${sin>1?'s':''} sin contestar.` : 'Contestaste todas las preguntas.';
+  if (mk) t += ` Tienes ${mk} marcada${mk>1?'s':''} para revisar.`;
+  t += ' Después de entregar no podrás cambiar tus respuestas.';
+  $('cf-text').textContent = t;
+  $('confirm-overlay').hidden = false; $('btn-cf-no').focus();
+});
+$('btn-cf-no').addEventListener('click', () => { $('confirm-overlay').hidden = true; });
+$('btn-cf-yes').addEventListener('click', () => { $('confirm-overlay').hidden = true; finish('manual'); });
+
+/* =====================================================================
+   ANTI-TRAMPA: faltas
+   ===================================================================== */
+function violation(reason){
+  if (phase !== 'exam' || !S || S.finished) return;
+  const now = Date.now();
+  if (now - lastV < CONFIG.COOLDOWN_MS) return;   // evita contar 3 veces un mismo evento
+  lastV = now;
+  S.violations.push({ t:new Date().toISOString(), reason });
+  persist(); renderHud();
+  const n = S.violations.length;
+  notifyViolation(reason, n);
+  if (n > CONFIG.MAX_VIOLATIONS){ finish('violaciones'); return; }
+  if (n === CONFIG.MAX_VIOLATIONS) toast(`Falta ${n} de ${CONFIG.MAX_VIOLATIONS}: ${reason}. Última advertencia: otra falta termina tu examen.`);
+  else toast(`Falta ${n} de ${CONFIG.MAX_VIOLATIONS}: ${reason}.`);
+}
+
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 5500);
+}
+
+// Salir de pantalla completa (también ocurre al minimizar en la mayoría de navegadores)
+document.addEventListener('fullscreenchange', () => {
+  if (phase !== 'exam') return;
+  if (!document.fullscreenElement){
+    $('fs-overlay').hidden = false;
+    violation('saliste de pantalla completa o minimizaste la ventana');
+  } else {
+    $('fs-overlay').hidden = true;
+  }
+});
+$('btn-fs').addEventListener('click', () => { enterFs(); });
+
+// Cambio de pestaña / minimizar
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) violation('cambiaste de pestaña o minimizaste el navegador');
+});
+// Pérdida de foco (otra ventana, otra aplicación, herramientas de desarrollo)
+window.addEventListener('blur', () => violation('la ventana del examen perdió el foco'));
+
+// Copiar, cortar, pegar
+['copy','cut','paste'].forEach(ev => document.addEventListener(ev, e => {
+  if (phase !== 'exam') return;
+  e.preventDefault();
+  violation('intentaste copiar, cortar o pegar');
+}));
+document.addEventListener('contextmenu', e => { if (phase === 'exam') e.preventDefault(); });
+['dragstart','selectstart'].forEach(ev => document.addEventListener(ev, e => { if (phase === 'exam') e.preventDefault(); }));
+
+// Atajos de teclado
+document.addEventListener('keydown', e => {
+  if (phase !== 'exam') return;
+  const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+
+  if (mod && ['c','v','x'].includes(k)){ e.preventDefault(); violation('intentaste copiar, cortar o pegar'); return; }
+  if (mod && ['a','p','s'].includes(k)){ e.preventDefault(); return; }
+  if (k === 'f12' || (mod && e.shiftKey && ['i','j','c'].includes(k)) || (mod && k === 'u')){
+    e.preventDefault(); violation('intentaste abrir las herramientas de desarrollo'); return;
+  }
+  if (mod || e.altKey) return;
+
+  // Atajos de uso del examen
+  if (!$('confirm-overlay').hidden || !$('fs-overlay').hidden) return;
+  if (k === 'arrowright'){ e.preventDefault(); goTo(S.current+1); }
+  else if (k === 'arrowleft'){ e.preventDefault(); goTo(S.current-1); }
+  else if (['a','b','c','d'].includes(k)){ selectAnswer(k.charCodeAt(0)-97); }
+  else if (['1','2','3','4'].includes(k)){ selectAnswer(Number(k)-1); }
+});
+document.addEventListener('keyup', e => {
+  if (phase === 'exam' && e.key === 'PrintScreen'){
+    try{ navigator.clipboard.writeText(''); }catch(_){}
+    violation('intentaste capturar la pantalla');
+  }
+});
+
+// Aviso al intentar cerrar o recargar durante el examen
+window.addEventListener('beforeunload', e => {
+  if (phase === 'exam'){ e.preventDefault(); e.returnValue = ''; }
+});
+
+/* =====================================================================
+   CALIFICACIÓN, RESULTADO Y GUARDADO
+   ===================================================================== */
+function grade(){
+  let ok = 0; const temas = {}; const respuestas = [];
+  S.order.forEach((ent, pos) => {
+    const q = QUESTIONS[ent.i];
+    temas[q.tema] = temas[q.tema] || { aciertos:0, total:0 };
+    temas[q.tema].total++;
+    const sel = S.answers[pos];
+    const orig = sel === undefined ? null : ent.perm[sel];
+    const correcta = orig === q.a;
+    if (correcta){ ok++; temas[q.tema].aciertos++; }
+    respuestas.push({ pregunta: ent.i+1, posicion: pos+1, tema: q.tema,
+      seleccionada: orig === null ? null : LETTERS[orig], correcta_letra: LETTERS[q.a], correcta });
+  });
+  return { aciertos: ok, total: N, calificacion: Math.round(ok/N*10000)/100, temas, respuestas };
+}
+
+async function finish(reason){
+  if (!S || S.finished) return;
+  S.finished = true; S.reason = reason; S.finishedAt = Date.now();
+  S.result = grade();
+  persist();
+  clearInterval(timerId);
+  monitorFinish();   // última foto, evento "fin" y apagado de la cámara (antes de cambiar la fase)
+  $('fs-overlay').hidden = true; $('cam-overlay').hidden = true; $('confirm-overlay').hidden = true; $('toast').hidden = true;
+  phase = 'result';
+  if (document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  renderResult();
+  saveResult();
+}
+
+function renderResult(){
+  const r = S.result || (S.result = grade());
+  show('result');
+  const titles = { manual:'Examen entregado', tiempo:'Se terminó el tiempo', violaciones:'Examen terminado por faltas' };
+  const reasons = {
+    manual: 'Entregaste el examen.',
+    tiempo: `Se agotaron los ${CONFIG.DURATION_MIN} minutos y el examen se entregó automáticamente.`,
+    violaciones: `Superaste el límite de ${CONFIG.MAX_VIOLATIONS} faltas, así que el examen se terminó automáticamente con las respuestas que tenías.`
+  };
+  $('res-title').textContent = titles[S.reason] || 'Examen terminado';
+  $('res-reason').textContent = `${S.nombre} · ${S.matricula}. ${reasons[S.reason] || ''}`;
+  $('res-grade').textContent = r.calificacion % 1 ? r.calificacion.toFixed(1) : r.calificacion;
+  $('res-hits').textContent = `${r.aciertos} de ${r.total} correctas`;
+  $('res-ok').textContent = r.aciertos;
+  $('res-faults').textContent = S.violations.length;
+  $('res-time').textContent = fmt(Math.min((S.finishedAt||Date.now()) - S.startedAt, CONFIG.DURATION_MIN*60000)).replace(/^(\d\d:\d\d)$/, '$1 min');
+  const tb = $('res-temas'); tb.textContent = '';
+  Object.entries(r.temas).forEach(([t, v]) => {
+    const tr = document.createElement('tr');
+    const a = document.createElement('td'); a.textContent = t;
+    const b = document.createElement('td'); b.textContent = `${v.aciertos} / ${v.total}`;
+    tr.append(a, b); tb.appendChild(tr);
+  });
+  setSave(S.saved ? 'ok' : 'saving');
+}
+
+function setSave(state, detail){
+  const el = $('save-status'), retry = $('btn-retry');
+  retry.hidden = state !== 'error';
+  if (state === 'saving'){ el.className = 'msg warn'; el.textContent = 'Guardando tu resultado…'; }
+  else if (state === 'ok'){ el.className = 'msg ok'; el.textContent = 'Tu resultado quedó guardado.'; }
+  else { el.className = 'msg err';
+    el.textContent = 'No se pudo guardar tu resultado' + (detail ? ` (${detail})` : '') + '. Revisa tu conexión y pulsa "Reintentar guardado". No cierres esta página hasta que se guarde.'; }
+}
+
+let saving = false;
+async function saveResult(){
+  if (saving) return; saving = true; setSave('saving');
+  try{
+    if (!sb) throw new Error('Supabase no está configurado');
+    const r = S.result;
+    const payload = {
+      id: S.id,
+      examen: CONFIG.EXAM_ID,
+      nombre: S.nombre, matricula: S.matricula, grupo: S.grupo || null,
+      aciertos: r.aciertos, total_preguntas: r.total, calificacion: r.calificacion,
+      motivo_fin: S.reason,
+      num_faltas: S.violations.length, faltas: S.violations,
+      respuestas: r.respuestas, detalle_temas: r.temas,
+      inicio: new Date(S.startedAt).toISOString(), fin: new Date(S.finishedAt).toISOString(),
+      duracion_seg: Math.round((S.finishedAt - S.startedAt)/1000),
+      user_agent: navigator.userAgent
+    };
+    const { error } = await sb.from(CONFIG.TABLE).insert([payload]);
+    if (error && error.code !== '23505') throw error;   // 23505 = ya estaba guardado
+    S.saved = true; persist(); setSave('ok');
+  }catch(e){
+    setSave('error', e && e.message ? e.message : '');
+  }finally{ saving = false; }
+}
+$('btn-retry').addEventListener('click', saveResult);
+window.addEventListener('online', () => { if (phase === 'result' && S && !S.saved) saveResult(); });
+
+init();
+</script>
+</body>
+</html>
